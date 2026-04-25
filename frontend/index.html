@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Parkinson Detector</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #f4f6f9;
+            text-align: center;
+            padding: 50px;
+        }
+        h1 {
+            color: #333;
+        }
+        textarea {
+            width: 60%;
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+        }
+        button {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 22px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🧠 Parkinson Disease Detector</h1>
+
+    <textarea id="features" rows="5" placeholder="Enter 22 values separated by commas"></textarea>
+    <br><br>
+
+    <button onclick="predict()">Predict</button>
+
+    <div id="result"></div>
+
+    <script>
+        async function predict() {
+            let input = document.getElementById("features").value;
+            let values = input.split(",").map(Number);
+
+            try {
+                let response = await fetch("http://127.0.0.1:5000/predict", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        type: "voice",
+                        features: values
+                    })
+                });
+
+                let data = await response.json();
+
+                document.getElementById("result").innerText = data.prediction;
+
+            } catch (error) {
+                document.getElementById("result").innerText = "Error connecting to server";
+            }
+        }
+    </script>
+
+</body>
+</html>
