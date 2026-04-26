@@ -11,9 +11,7 @@
             padding: 40px;
         }
 
-        h1 {
-            color: #333;
-        }
+        h1 { color: #333; }
 
         .tabs button {
             padding: 10px 20px;
@@ -25,9 +23,7 @@
             cursor: pointer;
         }
 
-        .tabs button:hover {
-            background: #0056b3;
-        }
+        .tabs button:hover { background: #0056b3; }
 
         .tab {
             display: none;
@@ -44,9 +40,7 @@
             cursor: pointer;
         }
 
-        button.action:hover {
-            background: #1e7e34;
-        }
+        button.action:hover { background: #1e7e34; }
 
         #voiceResult, #imageResult {
             margin-top: 15px;
@@ -65,7 +59,7 @@
     <button onclick="showTab('handwriting')">✍️ Handwriting</button>
 </div>
 
-<!-- 🎤 VOICE TAB -->
+<!-- VOICE -->
 <div id="voice" class="tab">
     <h2>Voice Detection</h2>
 
@@ -75,7 +69,7 @@
     <p id="voiceResult"></p>
 </div>
 
-<!-- ✍️ IMAGE TAB -->
+<!-- IMAGE -->
 <div id="handwriting" class="tab">
     <h2>Handwriting Detection</h2>
 
@@ -91,37 +85,40 @@
 let mediaRecorder;
 let audioChunks = [];
 
-// Switch tabs
+// Tabs
 function showTab(tab) {
     document.getElementById("voice").style.display = "none";
     document.getElementById("handwriting").style.display = "none";
-
     document.getElementById(tab).style.display = "block";
 }
 
-// 🎤 Start recording
+// 🎤 Start
 async function startRecording() {
-    audioChunks = [];  // 🔥 important fix
+    audioChunks = [];
 
     let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
     mediaRecorder = new MediaRecorder(stream);
 
-    mediaRecorder.ondataavailable = e => {
-        audioChunks.push(e.data);
-    };
+    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
 
     mediaRecorder.start();
 
     document.getElementById("voiceResult").innerText = "Recording...";
 }
 
-// 🎤 Stop recording
+// 🎤 Stop (FIXED)
 function stopRecording() {
-    mediaRecorder.stop();
+    if (!mediaRecorder) {
+        document.getElementById("voiceResult").innerText = "Click Start first";
+        return;
+    }
 
+    // 🔥 set BEFORE stop
     mediaRecorder.onstop = async () => {
-        let blob = new Blob(audioChunks, { type: 'audio/wav' });
+        document.getElementById("voiceResult").innerText = "Processing...";
+
+        let blob = new Blob(audioChunks, { type: 'audio/webm' });
 
         let formData = new FormData();
         formData.append("file", blob);
@@ -134,25 +131,30 @@ function stopRecording() {
 
             let data = await response.json();
 
-            document.getElementById("voiceResult").innerText = data.prediction || data.error;
+            document.getElementById("voiceResult").innerText =
+                data.prediction || data.error;
 
-        } catch (error) {
+        } catch (err) {
             document.getElementById("voiceResult").innerText = "Error connecting to server";
         }
     };
+
+    mediaRecorder.stop();
 }
 
-// ✍️ Upload image
+// ✍️ Image
 async function uploadImage() {
     let fileInput = document.getElementById("imageInput");
 
     if (!fileInput.files.length) {
-        document.getElementById("imageResult").innerText = "Please select an image";
+        document.getElementById("imageResult").innerText = "Select an image";
         return;
     }
 
     let formData = new FormData();
     formData.append("file", fileInput.files[0]);
+
+    document.getElementById("imageResult").innerText = "Processing...";
 
     try {
         let response = await fetch("https://parkinsons-detector-lu0v.onrender.com/predict_image", {
@@ -162,9 +164,10 @@ async function uploadImage() {
 
         let data = await response.json();
 
-        document.getElementById("imageResult").innerText = data.prediction || data.error;
+        document.getElementById("imageResult").innerText =
+            data.prediction || data.error;
 
-    } catch (error) {
+    } catch (err) {
         document.getElementById("imageResult").innerText = "Error connecting to server";
     }
 }

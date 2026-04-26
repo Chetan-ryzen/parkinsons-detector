@@ -1,30 +1,91 @@
-async function predict() {
-    const audio = document.getElementById("audio").files[0];
-    const image = document.getElementById("image").files[0];
+let mediaRecorder;
+let audioChunks = [];
 
-    if (!audio || !image) {
-        alert("Upload both files");
+// Switch tabs
+function showTab(tab) {
+    document.getElementById("voice").style.display = "none";
+    document.getElementById("handwriting").style.display = "none";
+    document.getElementById(tab).style.display = "block";
+}
+
+// 🎤 Start Recording
+async function startRecording() {
+    audioChunks = [];
+
+    let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+    mediaRecorder = new MediaRecorder(stream);
+
+    mediaRecorder.ondataavailable = (event) => {
+        audioChunks.push(event.data);
+    };
+
+    mediaRecorder.start();
+
+    document.getElementById("voiceResult").innerText = "Recording...";
+}
+
+// 🎤 Stop Recording
+function stopRecording() {
+    if (!mediaRecorder) {
+        document.getElementById("voiceResult").innerText = "Click Start first";
         return;
     }
 
-    const formData = new FormData();
-    formData.append("audio", audio);
-    formData.append("image", image);
+    // set BEFORE stop
+    mediaRecorder.onstop = async () => {
+        document.getElementById("voiceResult").innerText = "Processing...";
 
-    document.getElementById("result").innerText = "Processing...";
+        let blob = new Blob(audioChunks, { type: 'audio/webm' });
+
+        let formData = new FormData();
+        formData.append("file", blob);
+
+        try {
+            let response = await fetch("https://parkinsons-detector-lu0v.onrender.com/predict_voice", {
+                method: "POST",
+                body: formData
+            });
+
+            let data = await response.json();
+
+            document.getElementById("voiceResult").innerText =
+                data.prediction || data.error;
+
+        } catch (err) {
+            document.getElementById("voiceResult").innerText = "Error connecting to server";
+        }
+    };
+
+    mediaRecorder.stop();
+}
+
+// ✍️ Image Upload
+async function uploadImage() {
+    let fileInput = document.getElementById("imageInput");
+
+    if (!fileInput.files.length) {
+        document.getElementById("imageResult").innerText = "Select an image first";
+        return;
+    }
+
+    let formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+
+    document.getElementById("imageResult").innerText = "Processing...";
 
     try {
-        const res = await fetch("http://127.0.0.1:5000/predict", {
+        let response = await fetch("https://parkinsons-detector-lu0v.onrender.com/predict_image", {
             method: "POST",
             body: formData
         });
 
-        const data = await res.json();
+        let data = await response.json();
 
-        document.getElementById("result").innerText =
-            "Result: " + data.final_result;
+        document.getElementById("imageResult").innerText =
+            data.prediction || data.error;
 
     } catch (err) {
-        document.getElementById("result").innerText = "Error connecting backend";
+        document.getElementById("imageResult").innerText = "Error connecting to server";
     }
 }
