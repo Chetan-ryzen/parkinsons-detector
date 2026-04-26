@@ -2,32 +2,88 @@
 <html>
 <head>
     <title>Parkinson Detector</title>
+
     <style>
-        body { font-family: Arial; text-align: center; }
-        .tab { display: none; }
-        button { padding: 10px; margin: 5px; }
+        body {
+            font-family: Arial;
+            text-align: center;
+            background: #f4f6f9;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .tabs button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            background: #007bff;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .tabs button:hover {
+            background: #0056b3;
+        }
+
+        .tab {
+            display: none;
+            margin-top: 20px;
+        }
+
+        button.action {
+            padding: 10px 20px;
+            margin: 10px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        button.action:hover {
+            background: #1e7e34;
+        }
+
+        #voiceResult, #imageResult {
+            margin-top: 15px;
+            font-size: 20px;
+            font-weight: bold;
+        }
     </style>
 </head>
+
 <body>
 
 <h1>🧠 Parkinson Detector</h1>
 
-<button onclick="showTab('voice')">🎤 Voice</button>
-<button onclick="showTab('handwriting')">✍️ Handwriting</button>
+<div class="tabs">
+    <button onclick="showTab('voice')">🎤 Voice</button>
+    <button onclick="showTab('handwriting')">✍️ Handwriting</button>
+</div>
 
-<!-- Voice Tab -->
+<!-- 🎤 VOICE TAB -->
 <div id="voice" class="tab">
     <h2>Voice Detection</h2>
-    <button onclick="startRecording()">Start Recording</button>
-    <button onclick="stopRecording()">Stop</button>
+
+    <button class="action" onclick="startRecording()">Start Recording</button>
+    <button class="action" onclick="stopRecording()">Stop</button>
+
     <p id="voiceResult"></p>
 </div>
 
-<!-- Handwriting Tab -->
+<!-- ✍️ IMAGE TAB -->
 <div id="handwriting" class="tab">
     <h2>Handwriting Detection</h2>
-    <input type="file" id="imageInput">
-    <button onclick="uploadImage()">Predict</button>
+
+    <input type="file" id="imageInput" accept="image/*">
+    <br>
+
+    <button class="action" onclick="uploadImage()">Predict</button>
+
     <p id="imageResult"></p>
 </div>
 
@@ -35,22 +91,32 @@
 let mediaRecorder;
 let audioChunks = [];
 
+// Switch tabs
 function showTab(tab) {
     document.getElementById("voice").style.display = "none";
     document.getElementById("handwriting").style.display = "none";
+
     document.getElementById(tab).style.display = "block";
 }
 
-// 🎤 Voice recording
+// 🎤 Start recording
 async function startRecording() {
+    audioChunks = [];  // 🔥 important fix
+
     let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
     mediaRecorder = new MediaRecorder(stream);
 
-    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+    mediaRecorder.ondataavailable = e => {
+        audioChunks.push(e.data);
+    };
 
     mediaRecorder.start();
+
+    document.getElementById("voiceResult").innerText = "Recording...";
 }
 
+// 🎤 Stop recording
 function stopRecording() {
     mediaRecorder.stop();
 
@@ -60,29 +126,47 @@ function stopRecording() {
         let formData = new FormData();
         formData.append("file", blob);
 
-        let response = await fetch("https://parkinsons-detector-lu0v.onrender.com/predict_voice", {
+        try {
+            let response = await fetch("https://parkinsons-detector-lu0v.onrender.com/predict_voice", {
+                method: "POST",
+                body: formData
+            });
+
+            let data = await response.json();
+
+            document.getElementById("voiceResult").innerText = data.prediction || data.error;
+
+        } catch (error) {
+            document.getElementById("voiceResult").innerText = "Error connecting to server";
+        }
+    };
+}
+
+// ✍️ Upload image
+async function uploadImage() {
+    let fileInput = document.getElementById("imageInput");
+
+    if (!fileInput.files.length) {
+        document.getElementById("imageResult").innerText = "Please select an image";
+        return;
+    }
+
+    let formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+
+    try {
+        let response = await fetch("https://parkinsons-detector-lu0v.onrender.com/predict_image", {
             method: "POST",
             body: formData
         });
 
         let data = await response.json();
-        document.getElementById("voiceResult").innerText = data.prediction;
-    };
-}
 
-// ✍️ Image upload
-async function uploadImage() {
-    let fileInput = document.getElementById("imageInput");
-    let formData = new FormData();
-    formData.append("file", fileInput.files[0]);
+        document.getElementById("imageResult").innerText = data.prediction || data.error;
 
-    let response = await fetch("https://parkinsons-detector-lu0v.onrender.com/predict_image", {
-        method: "POST",
-        body: formData
-    });
-
-    let data = await response.json();
-    document.getElementById("imageResult").innerText = data.prediction;
+    } catch (error) {
+        document.getElementById("imageResult").innerText = "Error connecting to server";
+    }
 }
 </script>
 
