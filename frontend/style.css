@@ -1,0 +1,5 @@
+body {
+  text-align: center;
+  font-family: Arial;
+  background: #f4f4f4;
+}

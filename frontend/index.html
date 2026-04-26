@@ -3,76 +3,88 @@
 <head>
     <title>Parkinson Detector</title>
     <style>
-        body {
-            font-family: Arial;
-            background: #f4f6f9;
-            text-align: center;
-            padding: 50px;
-        }
-        h1 {
-            color: #333;
-        }
-        textarea {
-            width: 60%;
-            padding: 10px;
-            border-radius: 10px;
-            border: 1px solid #ccc;
-        }
-        button {
-            padding: 10px 20px;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-        button:hover {
-            background: #0056b3;
-        }
-        #result {
-            margin-top: 20px;
-            font-size: 22px;
-            font-weight: bold;
-        }
+        body { font-family: Arial; text-align: center; }
+        .tab { display: none; }
+        button { padding: 10px; margin: 5px; }
     </style>
 </head>
 <body>
 
-    <h1>🧠 Parkinson Disease Detector</h1>
+<h1>🧠 Parkinson Detector</h1>
 
-    <textarea id="features" rows="5" placeholder="Enter 22 values separated by commas"></textarea>
-    <br><br>
+<button onclick="showTab('voice')">🎤 Voice</button>
+<button onclick="showTab('handwriting')">✍️ Handwriting</button>
 
-    <button onclick="predict()">Predict</button>
+<!-- Voice Tab -->
+<div id="voice" class="tab">
+    <h2>Voice Detection</h2>
+    <button onclick="startRecording()">Start Recording</button>
+    <button onclick="stopRecording()">Stop</button>
+    <p id="voiceResult"></p>
+</div>
 
-    <div id="result"></div>
+<!-- Handwriting Tab -->
+<div id="handwriting" class="tab">
+    <h2>Handwriting Detection</h2>
+    <input type="file" id="imageInput">
+    <button onclick="uploadImage()">Predict</button>
+    <p id="imageResult"></p>
+</div>
 
-    <script>
-        async function predict() {
-            let input = document.getElementById("features").value;
-            let values = input.split(",").map(Number);
+<script>
+let mediaRecorder;
+let audioChunks = [];
 
-            try {
-                let response = await fetch("http://127.0.0.1:5000/predict", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        type: "voice",
-                        features: values
-                    })
-                });
+function showTab(tab) {
+    document.getElementById("voice").style.display = "none";
+    document.getElementById("handwriting").style.display = "none";
+    document.getElementById(tab).style.display = "block";
+}
 
-                let data = await response.json();
+// 🎤 Voice recording
+async function startRecording() {
+    let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
 
-                document.getElementById("result").innerText = data.prediction;
+    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
 
-            } catch (error) {
-                document.getElementById("result").innerText = "Error connecting to server";
-            }
-        }
-    </script>
+    mediaRecorder.start();
+}
+
+function stopRecording() {
+    mediaRecorder.stop();
+
+    mediaRecorder.onstop = async () => {
+        let blob = new Blob(audioChunks, { type: 'audio/wav' });
+
+        let formData = new FormData();
+        formData.append("file", blob);
+
+        let response = await fetch("https://parkinsons-detector-lu0v.onrender.com/predict_voice", {
+            method: "POST",
+            body: formData
+        });
+
+        let data = await response.json();
+        document.getElementById("voiceResult").innerText = data.prediction;
+    };
+}
+
+// ✍️ Image upload
+async function uploadImage() {
+    let fileInput = document.getElementById("imageInput");
+    let formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+
+    let response = await fetch("https://parkinsons-detector-lu0v.onrender.com/predict_image", {
+        method: "POST",
+        body: formData
+    });
+
+    let data = await response.json();
+    document.getElementById("imageResult").innerText = data.prediction;
+}
+</script>
 
 </body>
 </html>
