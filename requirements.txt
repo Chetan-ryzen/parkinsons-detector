@@ -7,3 +7,13 @@ gunicorn
 librosa
 opencv-python
 soundfile
+flask
+flask-cors
+numpy
+pandas
+scikit-learn
+gunicorn
+librosa
+soundfile
+opencv-python
+ffmpeg-python
