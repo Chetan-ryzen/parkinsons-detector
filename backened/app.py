@@ -7,9 +7,15 @@ app = Flask(__name__)
 CORS(app)
 
 # Load model
-model = pickle.load(open("models/model.pkl", "rb"))
-scaler = pickle.load(open("models/scaler.pkl", "rb"))
+import os
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+model_path = os.path.join(BASE_DIR, "models", "model.pkl")
+scaler_path = os.path.join(BASE_DIR, "models", "scaler.pkl")
+
+model = pickle.load(open(model_path, "rb"))
+scaler = pickle.load(open(scaler_path, "rb"))
 @app.route("/")
 def home():
     return "Backend Running ✅"
